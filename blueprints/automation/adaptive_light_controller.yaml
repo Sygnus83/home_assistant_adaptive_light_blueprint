@@ -1,6 +1,7 @@
 blueprint:
   name: Adaptive Light Controller
   author: Sygnus
+  version: "1.0.0"
   description: Personal lux-based dimmer with periodic updates, sun, cover and brightness-change conditions.
   source_url: https://raw.githubusercontent.com/Sygnus83/home_assistant_adaptive_light_blueprint/refs/heads/main/blueprints/automation/adaptive_light_controller.yaml
   domain: automation
