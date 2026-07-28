@@ -1,0 +1,320 @@
+blueprint:
+  name: Adaptive Light Controller
+  author: Sygnus
+  description: Personal lux-based dimmer with periodic updates, sun, cover and brightness-change conditions.
+  domain: automation
+  homeassistant:
+    min_version: 2024.10.0
+  input:
+    light_sensor_entity:
+      name: Light Sensor
+      description: Ambient-light sensor.
+      selector:
+        entity:
+          filter: [{domain: sensor, device_class: illuminance}]
+    trigger_light:
+      name: Trigger Light (Optional)
+      description: Run when any selected light turns on.
+      default: []
+      selector:
+        entity:
+          filter: [{domain: light}]
+          multiple: true
+    target_light:
+      name: Target lights (select individual light entities)
+      description: Only selected lights that are already on will be adjusted.
+      selector:
+        entity:
+          filter: [{domain: light}]
+          multiple: true
+    enable_periodic_update:
+      name: Enable periodic update (Optional)
+      description: Run the automation regularly, even if the light sensor value does not change.
+      default: false
+      selector: {boolean: {}}
+    periodic_update_interval:
+      name: Periodic update interval
+      description: How often to update the lights when periodic update is enabled.
+      default: 5
+      selector:
+        number: {min: 1, max: 60, step: 1, unit_of_measurement: min, mode: slider}
+    enable_sun_schedule:
+      name: Enable sunrise/sunset schedule (Optional)
+      description: Limit the automation to the selected part of the day.
+      default: false
+      selector: {boolean: {}}
+    sun_schedule_mode:
+      name: Sunrise/sunset schedule
+      default: night
+      selector:
+        select:
+          options:
+            - {label: Run from sunset to sunrise, value: night}
+            - {label: Run from sunrise to sunset, value: day}
+    sunrise_offset:
+      name: Sunrise offset
+      description: Negative values are before sunrise; positive values are after sunrise.
+      default: 0
+      selector:
+        number: {min: -60, max: 60, step: 5, unit_of_measurement: min, mode: slider}
+    sunset_offset:
+      name: Sunset offset
+      description: Negative values are before sunset; positive values are after sunset.
+      default: 0
+      selector:
+        number: {min: -60, max: 60, step: 5, unit_of_measurement: min, mode: slider}
+    enable_cover_condition:
+      name: Enable cover condition (Optional)
+      description: Limit the automation based on the selected cover position.
+      default: false
+      selector: {boolean: {}}
+    cover_entities:
+      name: Cover(s)
+      description: Select one or more covers. At least one must meet the position rule.
+      default: []
+      selector:
+        entity:
+          filter: [{domain: cover}]
+          multiple: true
+    cover_position_mode:
+      name: Cover position rule
+      default: below
+      selector:
+        select:
+          options:
+            - {label: At or below the threshold, value: below}
+            - {label: At or above the threshold, value: above}
+    cover_position_threshold:
+      name: Cover position threshold
+      default: 50
+      selector:
+        number: {min: 0, max: 100, step: 1, unit_of_measurement: "%", mode: slider}
+    run_conditions:
+      name: Conditions
+      description: Only run when these conditions are met.
+      default: []
+      selector: {condition: {}}
+    max_brightness_value:
+      name: Maximum ambient light value
+      description: Lux level for brightness at maximum light level.
+      default: 500
+      selector:
+        number: {min: 0, max: 3000, step: 10, unit_of_measurement: lx, mode: slider}
+    min_brightness_value:
+      name: Minimum ambient light value
+      description: Lux level for brightness at minimum light level.
+      default: 0
+      selector:
+        number: {min: 0, max: 1500, step: 10, unit_of_measurement: lx, mode: slider}
+    light_value_1:
+      name: Brightness at maximum light level
+      default: 0
+      selector:
+        number: {min: 0, max: 100, step: 1, unit_of_measurement: "%", mode: slider}
+    light_value_2:
+      name: Brightness at minimum light level
+      default: 100
+      selector:
+        number: {min: 0, max: 100, step: 1, unit_of_measurement: "%", mode: slider}
+    minimum_brightness_change:
+      name: Minimum brightness change
+      description: Only send an update when brightness differs by at least this amount.
+      default: 0
+      selector:
+        number: {min: 0, max: 30, step: 1, unit_of_measurement: "%", mode: slider}
+    transition_time:
+      name: Transition time
+      default: 0
+      selector:
+        number: {min: 0, max: 300, step: 1, unit_of_measurement: s, mode: slider}
+    color_or_temp_section:
+      name: Color or temperature settings
+      icon: mdi:palette
+      collapsed: true
+      input:
+        include_color_or_temp:
+          name: Include color or temperature
+          default: include_no_color_temp
+          selector:
+            select:
+              options:
+                - {label: Do not set color or temperature, value: include_no_color_temp}
+                - {label: Set color, value: include_color}
+                - {label: Set temperature, value: include_temp}
+        light_color:
+          name: Light color
+          default: [255, 255, 255]
+          selector: {color_rgb: {}}
+        light_temp:
+          name: Light temperature (Kelvin)
+          default: 4000
+          selector:
+            number: {min: 2000, max: 6500, step: 50, unit_of_measurement: K, mode: slider}
+    brightness_over_under_section:
+      name: Brightness values when outside range
+      icon: mdi:cog-transfer-outline
+      collapsed: true
+      input:
+        include_brightness_over_under:
+          name: Include brightness values when outside range
+          default: false
+          selector: {boolean: {}}
+        light_brightness_over_max:
+          name: Brightness when ambient light value over max.
+          default: 0
+          selector:
+            number: {min: 0, max: 100, step: 1, unit_of_measurement: "%", mode: slider}
+        light_brightness_under_min:
+          name: Brightness when ambient light value under min.
+          default: 100
+          selector:
+            number: {min: 0, max: 100, step: 1, unit_of_measurement: "%", mode: slider}
+    color_or_temp_over_under_section:
+      name: Color or temperature settings when outside range
+      icon: mdi:palette
+      collapsed: true
+      input:
+        include_color_or_temp_over_under:
+          name: Include color or temperature values when outside range
+          default: include_no_color_temp_outside_range
+          selector:
+            select:
+              options:
+                - {label: Do not set color or temperature when outside range, value: include_no_color_temp_outside_range}
+                - {label: Set color when outside range, value: include_color_outside_range}
+                - {label: Set temperature when outside range, value: include_temp_outside_range}
+        light_color_over_max:
+          name: Color when ambient light value over max.
+          default: [255, 255, 255]
+          selector: {color_rgb: {}}
+        light_color_under_min:
+          name: Color when ambient light value under min.
+          default: [255, 255, 255]
+          selector: {color_rgb: {}}
+        light_temp_over_max:
+          name: Temperature when ambient light value over max. (Kelvin)
+          default: 4000
+          selector:
+            number: {min: 2000, max: 6500, step: 50, unit_of_measurement: K, mode: slider}
+        light_temp_under_min:
+          name: Temperature when ambient light value under min. (Kelvin)
+          default: 4000
+          selector:
+            number: {min: 2000, max: 6500, step: 50, unit_of_measurement: K, mode: slider}
+
+mode: restart
+
+variables:
+  sensor: !input light_sensor_entity
+  min_lux: !input min_brightness_value
+  max_lux: !input max_brightness_value
+  min_level: !input light_value_2
+  max_level: !input light_value_1
+  outside: !input include_brightness_over_under
+  below_level: !input light_brightness_under_min
+  above_level: !input light_brightness_over_max
+  color_mode: !input include_color_or_temp
+  outside_color_mode: !input include_color_or_temp_over_under
+  color: !input light_color
+  color_below: !input light_color_under_min
+  color_above: !input light_color_over_max
+  temp: !input light_temp
+  temp_below: !input light_temp_under_min
+  temp_above: !input light_temp_over_max
+  transition: !input transition_time
+  periodic_update_interval: !input periodic_update_interval
+  enable_sun_schedule: !input enable_sun_schedule
+  sun_schedule_mode: !input sun_schedule_mode
+  sunrise_offset: !input sunrise_offset
+  sunset_offset: !input sunset_offset
+  enable_cover_condition: !input enable_cover_condition
+  cover_entities: !input cover_entities
+  cover_position_mode: !input cover_position_mode
+  cover_position_threshold: !input cover_position_threshold
+  target_lights: !input target_light
+  minimum_brightness_change: !input minimum_brightness_change
+
+triggers:
+  - trigger: state
+    entity_id: !input light_sensor_entity
+  - trigger: state
+    entity_id: !input trigger_light
+    from: "off"
+    to: "on"
+  - trigger: template
+    value_template: >-
+      {% set interval = periodic_update_interval | int(1) %}
+      {{ now().strftime('%Y-%m-%d %H:%M') if now().minute % interval == 0 else '' }}
+    enabled: !input enable_periodic_update
+
+conditions:
+  - condition: template
+    value_template: >-
+      {% if not enable_sun_schedule or states('sun.sun') in ['unknown', 'unavailable'] %}
+        true
+      {% else %}
+        {% set current_time = now() %}
+        {% set next_rising = as_local(as_datetime(state_attr('sun.sun', 'next_rising'))) %}
+        {% set next_setting = as_local(as_datetime(state_attr('sun.sun', 'next_setting'))) %}
+        {% set today_rising = next_rising - timedelta(days=1) if next_rising.date() > current_time.date() else next_rising %}
+        {% set today_setting = next_setting - timedelta(days=1) if next_setting.date() > current_time.date() else next_setting %}
+        {% set day_start = as_timestamp(today_rising) + sunrise_offset | float(0) * 60 %}
+        {% set day_end = as_timestamp(today_setting) + sunset_offset | float(0) * 60 %}
+        {% set is_daytime = as_timestamp(current_time) >= day_start and as_timestamp(current_time) < day_end %}
+        {{ is_daytime if sun_schedule_mode == 'day' else not is_daytime }}
+      {% endif %}
+  - condition: template
+    value_template: >-
+      {% if not enable_cover_condition %}
+        true
+      {% else %}
+        {% set ns = namespace(matches=false) %}
+        {% for cover in cover_entities %}
+          {% set position = state_attr(cover, 'current_position') %}
+          {% if position is not none %}
+            {% set position = position | float(-1) %}
+            {% if (cover_position_mode == 'below' and position <= (cover_position_threshold | float(0))) or (cover_position_mode == 'above' and position >= (cover_position_threshold | float(0))) %}
+              {% set ns.matches = true %}
+            {% endif %}
+          {% endif %}
+        {% endfor %}
+        {{ ns.matches }}
+      {% endif %}
+  - condition: and
+    conditions: !input run_conditions
+
+actions:
+  - variables:
+      lux: "{{ states(sensor) | float(0) }}"
+      brightness: >-
+        {% set lo = min_lux | float(0) %}{% set hi = max_lux | float(0) %}{% set x = lux | float(0) %}
+        {% set low = min_level | float(0) * 2.55 %}{% set high = max_level | float(0) * 2.55 %}
+        {% set value = above_level | float(0) * 2.55 if outside and x > hi else below_level | float(0) * 2.55 if outside and x < lo else low + (x - lo) * (high - low) / (hi - lo) if hi > lo else low %}
+        {{ [1, [255, value | round(0) | int] | min] | max }}
+      mode: >-
+        {% set setting = outside_color_mode if outside else color_mode %}
+        {{ 'rgb' if setting in ['include_color', 'include_color_outside_range'] else 'kelvin' if setting in ['include_temp', 'include_temp_outside_range'] else 'none' }}
+      rgb: "{{ color_above if outside and lux | float(0) > max_lux | float(0) else color_below if outside and lux | float(0) < min_lux | float(0) else color }}"
+      kelvin: "{{ temp_above if outside and lux | float(0) > max_lux | float(0) else temp_below if outside and lux | float(0) < min_lux | float(0) else temp }}"
+  - variables:
+      lights_to_update: >-
+        {% set threshold = minimum_brightness_change | float(0) * 2.55 %}
+        {% set desired_brightness = brightness | int(1) %}
+        {% set ns = namespace(lights=[]) %}
+        {% for light in target_lights %}
+          {% set current_brightness = state_attr(light, 'brightness') %}
+          {% if is_state(light, 'on') and (current_brightness is none or (((current_brightness | int(0)) - desired_brightness) | abs) >= threshold) %}
+            {% set ns.lights = ns.lights + [light] %}
+          {% endif %}
+        {% endfor %}
+        {{ ns.lights | join(', ') }}
+  - condition: template
+    value_template: "{{ lights_to_update | length > 0 }}"
+  - action: light.turn_on
+    target:
+      entity_id: "{{ lights_to_update }}"
+    data: >-
+      {% set data = {'brightness': brightness | int(1), 'transition': transition | float(0)} %}
+      {% if mode == 'rgb' %}{% set data = dict(data, rgb_color=rgb) %}
+      {% elif mode == 'kelvin' %}{% set data = dict(data, color_temp_kelvin=kelvin | int(4000)) %}{% endif %}
+      {{ data }}
