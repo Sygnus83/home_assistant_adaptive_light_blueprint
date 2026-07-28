@@ -28,5 +28,12 @@ Egy rugalmas, személyre szabható Home Assistant blueprint, amely lux (fényer�
 * **Fényerő-változási küszöb:** Megakadályozza a felesleges parancsok küldését azáltal, hogy csak akkor frissíti a lámpát, ha a kívánt fényerő változása eléri a megadott százalékos értéket.
 * **Szín- és színhőmérséklet-kezelés:** Lehetőség van fix RGB szín, Kelvinben megadott színhőmérséklet, valamint a tartományon kívüli (over/under) értékek megadására is.
 
+* <img width="939" height="779" alt="{6730F4F7-F118-41A0-B9FF-A3FEA45447F9}" src="https://github.com/user-attachments/assets/cfec5a50-186c-4e35-bbae-009b55f04006" />
+<img width="938" height="800" alt="{0A6ECB73-B608-477E-8E25-2C791F1A2230}" src="https://github.com/user-attachments/assets/51f9363c-2a31-4f6e-a56f-f9832b1c419f" />
+<img width="921" height="697" alt="{9B821BE5-6344-44A7-B491-F17EAC86ECD9}" src="https://github.com/user-attachments/assets/25ee803a-fb88-4ca1-af8b-6b9098dd6d03" />
+
+
+
+
 
 [![Open your Home Assistant instance and show the blueprint import dialog with a specific blueprint URL](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2FSygnus83%2Fhome_assistant_adaptive_light_blueprint%2Fmain%2Fblueprints%2Fautomation%2Fadaptive_light_controller.yaml)
