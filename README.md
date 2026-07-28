@@ -28,11 +28,19 @@ Egy rugalmas, személyre szabható Home Assistant blueprint, amely lux (fényer�
 * **Fényerő-változási küszöb:** Megakadályozza a felesleges parancsok küldését azáltal, hogy csak akkor frissíti a lámpát, ha a kívánt fényerő változása eléri a megadott százalékos értéket.
 * **Szín- és színhőmérséklet-kezelés:** Lehetőség van fix RGB szín, Kelvinben megadott színhőmérséklet, valamint a tartományon kívüli (over/under) értékek megadására is.
 
-<img width="600" alt="Blueprint beállítás 1" src="https://github.com/user-attachments/assets/cfec5a50-186c-4e35-bbae-009b55f04006" />
+## Beállítási példák / Felület:
 
-<img width="600" alt="Blueprint beállítás 2" src="https://github.com/user-attachments/assets/51f9363c-2a31-4f6e-a56f-f9832b1c419f" />
+<p align="center">
+  <img width="700" alt="Blueprint beállítás 1" src="https://github.com/user-attachments/assets/cfec5a50-186c-4e35-bbae-009b55f04006" />
+</p>
 
-<img width="600" alt="Blueprint beállítás 3" src="https://github.com/user-attachments/assets/25ee803a-fb88-4ca1-af8b-6b9098dd6d03" />
+<p align="center">
+  <img width="700" alt="Blueprint beállítás 2" src="https://github.com/user-attachments/assets/51f9363c-2a31-4f6e-a56f-f9832b1c419f" />
+</p>
+
+<p align="center">
+  <img width="700" alt="Blueprint beállítás 3" src="https://github.com/user-attachments/assets/25ee803a-fb88-4ca1-af8b-6b9098dd6d03" />
+</p>
 
 
 
