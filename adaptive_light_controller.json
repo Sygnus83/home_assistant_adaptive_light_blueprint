@@ -1,0 +1,174 @@
+{
+  "name": {
+    "en": "Adaptive Light Controller",
+    "hu": "Adaptív Fényvezérlő",
+    "de": "Adaptiver Licht-Controller"
+  },
+  "description": {
+    "en": "Personal lux-based dimmer with periodic updates, sun, cover and brightness-change conditions.",
+    "hu": "Személyes lux-alapú fényerőszabályzó időszakos frissítéssel, nap-, redőny- és fényerő-változási feltételekkel.",
+    "de": "Persönlicher lux-basierter Dimmer mit periodischen Updates, Sonnen-, Rollladen- und Helligkeitsänderungs-Bedingungen."
+  },
+  "input": {
+    "light_sensor_entity": {
+      "name": {
+        "en": "Light Sensor",
+        "hu": "Fényérzékelő",
+        "de": "Lichtsensor"
+      },
+      "description": {
+        "en": "Ambient-light sensor.",
+        "hu": "Környezeti fényérzékelő szenzor.",
+        "de": "Umgebungslichtsensor."
+      }
+    },
+    "trigger_light": {
+      "name": {
+        "en": "Trigger Light (Optional)",
+        "hu": "Indító lámpa (Opcionális)",
+        "de": "Auslöser-Licht (Optional)"
+      },
+      "description": {
+        "en": "Run when any selected light turns on.",
+        "hu": "Futtatás, amikor bármelyik kiválasztott lámpa bekapcsol.",
+        "de": "Wird ausgeführt, wenn ein ausgewähltes Licht eingeschaltet wird."
+      }
+    },
+    "target_light": {
+      "name": {
+        "en": "Target lights (select individual light entities)",
+        "hu": "Célfények (válassz ki egyedi lámpa entitásokat)",
+        "de": "Ziel-Lichter (einzelne Licht-Entitäten auswählen)"
+      },
+      "description": {
+        "en": "Only selected lights that are already on will be adjusted.",
+        "hu": "Csak a már bekapcsolt, kiválasztott lámpák lesznek beállítva.",
+        "de": "Nur bereits eingeschaltete ausgewählte Lichter werden angepasst."
+      }
+    },
+    "enable_periodic_update": {
+      "name": {
+        "en": "Enable periodic update (Optional)",
+        "hu": "Időszakos frissítés engedélyezése (Opcionális)",
+        "de": "Periodische Aktualisierung aktivieren (Optional)"
+      },
+      "description": {
+        "en": "Run the automation regularly, even if the light sensor value does not change.",
+        "hu": "Az automatizálás rendszeres futtatása akkor is, ha a fényérzékelő értéke nem változik.",
+        "de": "Die Automatisierung regelmäßig ausführen, auch wenn sich der Wert des Lichtsensors nicht ändert."
+      }
+    },
+    "periodic_update_interval": {
+      "name": {
+        "en": "Periodic update interval",
+        "hu": "Időszakos frissítési időköz",
+        "de": "Intervall für periodische Aktualisierung"
+      },
+      "description": {
+        "en": "How often to update the lights when periodic update is enabled.",
+        "hu": "Milyen gyakran frissüljenek a lámpák, ha az időszakos frissítés engedélyezve van.",
+        "de": "Wie oft die Lichter aktualisiert werden sollen, wenn die periodische Aktualisierung aktiviert ist."
+      }
+    },
+    "enable_sun_schedule": {
+      "name": {
+        "en": "Enable sunrise/sunset schedule (Optional)",
+        "hu": "Napkelte/napnyugta ütemezés engedélyezése (Opcionális)",
+        "de": "Sonnenaufgangs-/Sonnenuntergangs-Zeitplan aktivieren (Optional)"
+      },
+      "description": {
+        "en": "Limit the automation to the selected part of the day.",
+        "hu": "Az automatizálás korlátozása a nap kiválasztott időszakára.",
+        "de": "Die Automatisierung auf den ausgewählten Teil des Tages beschränken."
+      }
+    },
+    "sun_schedule_mode": {
+      "name": {
+        "en": "Sunrise/sunset schedule",
+        "hu": "Napkelte/napnyugta ütemezés",
+        "de": "Sonnenaufgangs-/Sonnenuntergangs-Zeitplan"
+      }
+    },
+    "sunrise_offset": {
+      "name": {
+        "en": "Sunrise offset",
+        "hu": "Napkelte eltolás",
+        "de": "Sonnenaufgang-Versatz"
+      },
+      "description": {
+        "en": "Negative values are before sunrise; positive values are after sunrise.",
+        "hu": "A negatív értékek napkelte előttiek; a pozitívak napkelte utániak.",
+        "de": "Negative Werte liegen vor dem Sonnenaufgang; positive Werte nach dem Sonnenaufgang."
+      }
+    },
+    "sunset_offset": {
+      "name": {
+        "en": "Sunset offset",
+        "hu": "Napnyugta eltolás",
+        "de": "Sonnenuntergang-Versatz"
+      },
+      "description": {
+        "en": "Negative values are before sunset; positive values are after sunset.",
+        "hu": "A negatív értékek napnyugta előttiek; a pozitívak napnyugta utániak.",
+        "de": "Negative Werte liegen vor dem Sonnenuntergang; positive Werte nach dem Sonnenuntergang."
+      }
+    },
+    "max_brightness_value": {
+      "name": {
+        "en": "Maximum ambient light value",
+        "hu": "Maximális környezeti fényérték",
+        "de": "Maximaler Umgebungslichtwert"
+      },
+      "description": {
+        "en": "Lux level for brightness at maximum light level.",
+        "hu": "Lux szint a maximális fényerőhöz.",
+        "de": "Lux-Wert für Helligkeit bei maximaler Lichtstufe."
+      }
+    },
+    "min_brightness_value": {
+      "name": {
+        "en": "Minimum ambient light value",
+        "hu": "Minimális környezeti fényérték",
+        "de": "Minimaler Umgebungslichtwert"
+      },
+      "description": {
+        "en": "Lux level for brightness at minimum light level.",
+        "hu": "Lux szint a minimális fényerőhöz.",
+        "de": "Lux-Wert für Helligkeit bei minimaler Lichtstufe."
+      }
+    },
+    "light_value_1": {
+      "name": {
+        "en": "Brightness at maximum light level",
+        "hu": "Fényerő maximális környezeti fénynél",
+        "de": "Helligkeit bei maximalem Lichtpegel"
+      }
+    },
+    "light_value_2": {
+      "name": {
+        "en": "Brightness at minimum light level",
+        "hu": "Fényerő minimális környezeti fénynél",
+        "de": "Helligkeit bei minimalem Lichtpegel"
+      }
+    },
+    "minimum_brightness_change": {
+      "name": {
+        "en": "Minimum brightness change",
+        "hu": "Minimális fényerő-változás",
+        "de": "Minimale Helligkeitsänderung"
+      },
+      "description": {
+        "en": "Only send an update when brightness differs by at least this amount.",
+        "hu": "Csak akkor küldjön frissítést, ha a fényerő legalább ennyivel eltér.",
+        "de": "Nur dann ein Update senden, wenn sich die Helligkeit um mindestens diesen Betrag unterscheidet."
+      }
+    },
+    "transition_time": {
+      "name": {
+        "en": "Transition time",
+        "hu": "Átmeneti idő",
+        "de": "Übergangszeit"
+      }
+    }
+  }
+}
