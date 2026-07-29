@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v.2.0.
   - **German (de)** language pack added.
   - **English (en)** retained as the default fallback language.
 
-## [1.0.0] - 2026-06-XX *(Initial Release)*
+## [1.0.0] - 2026-07-25 *(Initial Release)*
 
 ### Added
 - Initial release of the **Adaptive Light Controller** blueprint.
