@@ -1,7 +1,7 @@
 blueprint:
-  name: Adaptive Light Controller
+  name: Adaptive Light Controller v1.1.0
   author: Sygnus
-  description: Personal lux-based dimmer with periodic updates, sun, cover and brightness-change conditions.
+  description: "v1.1.0 - Personal lux-based dimmer with periodic updates, sun, cover, presence and brightness-change conditions."
   source_url: https://raw.githubusercontent.com/Sygnus83/home_assistant_adaptive_light_blueprint/refs/heads/main/blueprints/automation/adaptive_light_controller.yaml
   domain: automation
   homeassistant:
@@ -36,9 +36,48 @@ blueprint:
     periodic_update_interval:
       name: Periodic update interval
       description: How often to update the lights when periodic update is enabled.
-      default: 5
+      default: "/5"
       selector:
-        number: {min: 1, max: 60, step: 1, unit_of_measurement: min, mode: slider}
+        select:
+          options:
+            - {label: Every 1 minute, value: "/1"}
+            - {label: Every 2 minutes, value: "/2"}
+            - {label: Every 3 minutes, value: "/3"}
+            - {label: Every 4 minutes, value: "/4"}
+            - {label: Every 5 minutes, value: "/5"}
+            - {label: Every 6 minutes, value: "/6"}
+            - {label: Every 7 minutes, value: "/7"}
+            - {label: Every 8 minutes, value: "/8"}
+            - {label: Every 9 minutes, value: "/9"}
+            - {label: Every 10 minutes, value: "/10"}
+    enable_presence_brightness:
+      name: Enable presence/motion brightness (Optional)
+      description: Use a fixed brightness when none of the selected presence or motion sensors are on.
+      default: false
+      selector: {boolean: {}}
+    presence_entities:
+      name: Presence or motion sensor(s)
+      description: Select binary sensors. If at least one is on, normal lux-based brightness is used.
+      default: []
+      selector:
+        entity:
+          filter: [{domain: binary_sensor}]
+          multiple: true
+    no_presence_brightness:
+      name: Brightness when no presence is detected
+      default: 20
+      selector:
+        number: {min: 1, max: 100, step: 1, unit_of_measurement: "%", mode: slider}
+    enable_sensor_fallback:
+      name: Enable unavailable lux sensor fallback (Optional)
+      description: Use a fixed brightness if the lux sensor state is unknown or unavailable.
+      default: false
+      selector: {boolean: {}}
+    sensor_fallback_brightness:
+      name: Brightness when lux sensor is unavailable
+      default: 50
+      selector:
+        number: {min: 1, max: 100, step: 1, unit_of_measurement: "%", mode: slider}
     enable_sun_schedule:
       name: Enable sunrise/sunset schedule (Optional)
       description: Limit the automation to the selected part of the day.
@@ -223,7 +262,11 @@ variables:
   temp_below: !input light_temp_under_min
   temp_above: !input light_temp_over_max
   transition: !input transition_time
-  periodic_update_interval: !input periodic_update_interval
+  enable_presence_brightness: !input enable_presence_brightness
+  presence_entities: !input presence_entities
+  no_presence_brightness: !input no_presence_brightness
+  enable_sensor_fallback: !input enable_sensor_fallback
+  sensor_fallback_brightness: !input sensor_fallback_brightness
   enable_sun_schedule: !input enable_sun_schedule
   sun_schedule_mode: !input sun_schedule_mode
   sunrise_offset: !input sunrise_offset
@@ -242,13 +285,16 @@ triggers:
     entity_id: !input trigger_light
     from: "off"
     to: "on"
-  - trigger: template
-    value_template: >-
-      {% set interval = periodic_update_interval | int(1) %}
-      {{ now().strftime('%Y-%m-%d %H:%M') if now().minute % interval == 0 else '' }}
+  - trigger: state
+    entity_id: !input presence_entities
+    enabled: !input enable_presence_brightness
+  - trigger: time_pattern
+    minutes: !input periodic_update_interval
     enabled: !input enable_periodic_update
 
 conditions:
+  - condition: template
+    value_template: "{{ has_value(sensor) or enable_sensor_fallback }}"
   - condition: template
     value_template: >-
       {% if not enable_sun_schedule or states('sun.sun') in ['unknown', 'unavailable'] %}
@@ -287,16 +333,27 @@ conditions:
 actions:
   - variables:
       lux: "{{ states(sensor) | float(0) }}"
+      sensor_available: "{{ has_value(sensor) }}"
+      presence_detected: >-
+        {% set ns = namespace(detected=false) %}
+        {% for entity in presence_entities %}
+          {% if is_state(entity, 'on') %}
+            {% set ns.detected = true %}
+          {% endif %}
+        {% endfor %}
+        {{ ns.detected }}
       brightness: >-
         {% set lo = min_lux | float(0) %}{% set hi = max_lux | float(0) %}{% set x = lux | float(0) %}
         {% set low = min_level | float(0) * 2.55 %}{% set high = max_level | float(0) * 2.55 %}
         {% set value = above_level | float(0) * 2.55 if outside and x > hi else below_level | float(0) * 2.55 if outside and x < lo else low + (x - lo) * (high - low) / (hi - lo) if hi > lo else low %}
-        {{ [1, [255, value | round(0) | int] | min] | max }}
+        {% set fallback = sensor_fallback_brightness | float(1) * 2.55 %}
+        {% set absent = no_presence_brightness | float(1) * 2.55 %}
+        {{ [1, [255, (fallback if not (sensor_available | bool) else absent if (enable_presence_brightness | bool) and not (presence_detected | bool) else value) | round(0) | int] | min] | max }}
       mode: >-
-        {% set setting = outside_color_mode if outside else color_mode %}
+        {% set setting = outside_color_mode if outside and (sensor_available | bool) else color_mode %}
         {{ 'rgb' if setting in ['include_color', 'include_color_outside_range'] else 'kelvin' if setting in ['include_temp', 'include_temp_outside_range'] else 'none' }}
-      rgb: "{{ color_above if outside and lux | float(0) > max_lux | float(0) else color_below if outside and lux | float(0) < min_lux | float(0) else color }}"
-      kelvin: "{{ temp_above if outside and lux | float(0) > max_lux | float(0) else temp_below if outside and lux | float(0) < min_lux | float(0) else temp }}"
+      rgb: "{{ color_above if outside and (sensor_available | bool) and lux | float(0) > max_lux | float(0) else color_below if outside and (sensor_available | bool) and lux | float(0) < min_lux | float(0) else color }}"
+      kelvin: "{{ temp_above if outside and (sensor_available | bool) and lux | float(0) > max_lux | float(0) else temp_below if outside and (sensor_available | bool) and lux | float(0) < min_lux | float(0) else temp }}"
   - variables:
       lights_to_update: >-
         {% set threshold = minimum_brightness_change | float(0) * 2.55 %}
