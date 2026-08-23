@@ -14,3 +14,30 @@
 - Color temperature (Kelvin) and RGB color adaptation settings (both standard and outside range).
 - Minimum brightness change threshold to prevent spamming unnecessary light updates.
 - Configurable transition time for smooth dimming.
+
+
+Változásnapló
+[1.0.0] - 2026-07-25 (Első kiadás)
+Hozzáadva
+- Az Adaptive Light Controller blueprint első kiadása.
+- Lux-alapú, dinamikus fényerőszabályzás a környezeti fényszenzor értékei alapján.
+- Opcionális triggerlámpa-támogatás: az automatizmus megadott lámpák bekapcsolásakor is elindul.
+- Rendszeres frissítés állítható perces időközökkel.
+- Napkelte-/napnyugta-időzítés: napnyugtától napkeltéig vagy napkeltétől napnyugtáig, egyedi eltolásokkal.
+- Redőnyfeltétel a futás korlátozására redőny- vagy árnyékolópozíció alapján, állítható küszöbérték felett vagy alatt.
+- Haladó fényerőtartomány-kezelés a minimum- vagy maximális környezeti fényértéken kívüli működéshez.
+- Kelvin színhőmérséklet- és RGB-színbeállítások, normál és tartományon kívüli helyzetekre is.
+- Minimális fényerőváltozási küszöb a felesleges lámpafrissítések elkerülésére.
+- Állítható átmeneti idő a fokozatos fényerőváltáshoz.
+[1.1.0] - 2026-08-23
+Hozzáadva
+- Verziószám megjelenítése a blueprint nevében és leírásában.
+- Opcionális jelenlét-/mozgásalapú fényerőszabályzás:
+  - érzékelt jelenlétnél normál lux-alapú működés;
+  - jelenlét hiányában megadott fix fényerő.
+- A kiválasztott jelenlét- vagy mozgásérzékelő állapotváltozása azonnal frissíti a fényerőt.
+- Opcionális fix tartalékfényerő, ha a luxszenzor állapota unknown vagy unavailable.
+Javítva
+- A rendszeres frissítés valódi time_pattern triggerre váltott.
+- A frissítési időköz most 1–10 perc között választható, megbízható perces ütemezéssel.
+- Ha a luxszenzor nem elérhető, és a tartalékfényerő nincs engedélyezve, az automatizmus nem módosítja a lámpákat.
