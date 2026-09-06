@@ -1,7 +1,7 @@
 blueprint:
-  name: Adaptive Light Controller v1.1.0
+  name: Adaptive Light Controller v1.2
   author: Sygnus
-  description: "v1.1.0 - Personal lux-based dimmer with periodic updates, sun, cover, presence and brightness-change conditions."
+  description: "v1.2.3 - Advanced adaptive controller with Sleep Mode, Circadian support, and Smart Presence filtering."
   source_url: https://raw.githubusercontent.com/Sygnus83/home_assistant_adaptive_light_blueprint/refs/heads/main/blueprints/automation/adaptive_light_controller.yaml
   domain: automation
   homeassistant:
@@ -63,6 +63,12 @@ blueprint:
         entity:
           filter: [{domain: binary_sensor}]
           multiple: true
+    presence_hold_time:
+      name: Presence Hold Time
+      description: Wait this many seconds after motion stops before dimming the lights.
+      default: 30
+      selector:
+        number: {min: 0, max: 600, step: 1, unit_of_measurement: s, mode: slider}
     no_presence_brightness:
       name: Brightness when no presence is detected
       default: 20
@@ -162,6 +168,30 @@ blueprint:
       default: 0
       selector:
         number: {min: 0, max: 30, step: 1, unit_of_measurement: "%", mode: slider}
+    sleep_mode_section:
+      name: Night / Sleep Mode Settings
+      icon: mdi:bed
+      collapsed: true
+      input:
+        sleep_mode_entity:
+          name: Sleep Mode Entity (Optional)
+          description: An input_boolean or binary_sensor. If ON, sleep brightness is used.
+          default: none
+          selector:
+            entity:
+              filter: [{domain: [input_boolean, binary_sensor]}]
+        sleep_brightness:
+          name: Sleep Mode Brightness
+          default: 5
+          selector:
+            number: {min: 1, max: 100, step: 1, unit_of_measurement: "%", mode: slider}
+    manual_override_entity:
+      name: Manual Override Helper (Optional)
+      description: "An input_boolean. If this is ON, the automation will skip updates."
+      default: none
+      selector:
+        entity:
+          filter: [{domain: input_boolean}]
     transition_time:
       name: Transition time
       default: 0
@@ -181,6 +211,7 @@ blueprint:
                 - {label: Do not set color or temperature, value: include_no_color_temp}
                 - {label: Set color, value: include_color}
                 - {label: Set temperature, value: include_temp}
+                - {label: Follow Circadian rhythm (Sun elevation), value: include_circadian}
         light_color:
           name: Light color
           default: [255, 255, 255]
@@ -190,6 +221,16 @@ blueprint:
           default: 4000
           selector:
             number: {min: 2000, max: 6500, step: 50, unit_of_measurement: K, mode: slider}
+        circadian_min_temp:
+          name: Circadian Minimum Temperature (Warm)
+          default: 2200
+          selector:
+            number: {min: 2000, max: 5000, step: 50, unit_of_measurement: K}
+        circadian_max_temp:
+          name: Circadian Maximum Temperature (Cold)
+          default: 5500
+          selector:
+            number: {min: 4000, max: 7000, step: 50, unit_of_measurement: K}
     brightness_over_under_section:
       name: Brightness values when outside range
       icon: mdi:cog-transfer-outline
@@ -261,9 +302,15 @@ variables:
   temp: !input light_temp
   temp_below: !input light_temp_under_min
   temp_above: !input light_temp_over_max
+  circadian_min: !input circadian_min_temp
+  circadian_max: !input circadian_max_temp
+  sleep_entity: !input sleep_mode_entity
+  sleep_level: !input sleep_brightness
+  override_entity: !input manual_override_entity
   transition: !input transition_time
   enable_presence_brightness: !input enable_presence_brightness
   presence_entities: !input presence_entities
+  hold_time: !input presence_hold_time
   no_presence_brightness: !input no_presence_brightness
   enable_sensor_fallback: !input enable_sensor_fallback
   sensor_fallback_brightness: !input sensor_fallback_brightness
@@ -288,11 +335,19 @@ triggers:
   - trigger: state
     entity_id: !input presence_entities
     enabled: !input enable_presence_brightness
+  - trigger: state
+    entity_id: !input presence_entities
+    to: "off"
+    for:
+      seconds: !input presence_hold_time
+    enabled: !input enable_presence_brightness
   - trigger: time_pattern
     minutes: !input periodic_update_interval
     enabled: !input enable_periodic_update
 
 conditions:
+  - condition: template
+    value_template: "{{ override_entity == 'none' or is_state(override_entity, 'off') }}"
   - condition: template
     value_template: "{{ has_value(sensor) or enable_sensor_fallback }}"
   - condition: template
@@ -334,38 +389,78 @@ actions:
   - variables:
       lux: "{{ states(sensor) | float(0) }}"
       sensor_available: "{{ has_value(sensor) }}"
+      sleep_active: "{{ is_state(sleep_entity, 'on') if sleep_entity != 'none' else false }}"
+      is_motion_trigger: >-
+        {{ trigger.entity_id is defined and trigger.entity_id in presence_entities and trigger.to_state is defined and trigger.to_state.state == 'on' }}
+      is_presence_event: >-
+        {{ trigger.entity_id is defined and trigger.entity_id in presence_entities }}
       presence_detected: >-
         {% set ns = namespace(detected=false) %}
         {% for entity in presence_entities %}
-          {% if is_state(entity, 'on') %}
-            {% set ns.detected = true %}
+          {% set state_obj = states[entity] %}
+          {% if state_obj is not none %}
+            {% set last_changed = (now() - state_obj.last_changed).total_seconds() %}
+            {% if state_obj.state == 'on' or (state_obj.state == 'off' and last_changed < (hold_time | float(0))) %}
+              {% set ns.detected = true %}
+            {% endif %}
           {% endif %}
         {% endfor %}
         {{ ns.detected }}
       brightness: >-
-        {% set lo = min_lux | float(0) %}{% set hi = max_lux | float(0) %}{% set x = lux | float(0) %}
-        {% set low = min_level | float(0) * 2.55 %}{% set high = max_level | float(0) * 2.55 %}
-        {% set value = above_level | float(0) * 2.55 if outside and x > hi else below_level | float(0) * 2.55 if outside and x < lo else low + (x - lo) * (high - low) / (hi - lo) if hi > lo else low %}
-        {% set fallback = sensor_fallback_brightness | float(1) * 2.55 %}
-        {% set absent = no_presence_brightness | float(1) * 2.55 %}
-        {{ [1, [255, (fallback if not (sensor_available | bool) else absent if (enable_presence_brightness | bool) and not (presence_detected | bool) else value) | round(0) | int] | min] | max }}
+        {% if sleep_active %}
+          {{ (sleep_level | float(0) * 2.55) | round(0) | int }}
+        {% else %}
+          {% set lo = min_lux | float(0) %}{% set hi = max_lux | float(0) %}{% set x = lux | float(0) %}
+          {% set low = min_level | float(0) * 2.55 %}{% set high = max_level | float(0) * 2.55 %}
+          {% if outside and x > hi %}
+            {% set value = above_level | float(0) * 2.55 %}
+          {% elif outside and x < lo %}
+            {% set value = below_level | float(0) * 2.55 %}
+          {% elif hi > lo %}
+            {% set value = low + (x - lo) * (high - low) / (hi - lo) %}
+          {% else %}
+            {% set value = low %}
+          {% endif %}
+          {% set fallback = sensor_fallback_brightness | float(1) * 2.55 %}
+          {% set absent = no_presence_brightness | float(1) * 2.55 %}
+          {% set final = fallback if not sensor_available else absent if (enable_presence_brightness and not (presence_detected | bool)) else value %}
+          {{ ([1, ([255, final | round(0) | int] | min)] | max) }}
+        {% endif %}
       mode: >-
         {% set setting = outside_color_mode if outside and (sensor_available | bool) else color_mode %}
-        {{ 'rgb' if setting in ['include_color', 'include_color_outside_range'] else 'kelvin' if setting in ['include_temp', 'include_temp_outside_range'] else 'none' }}
+        {{ 'rgb' if setting in ['include_color', 'include_color_outside_range'] else 'kelvin' if setting in ['include_temp', 'include_temp_outside_range', 'include_circadian'] else 'none' }}
       rgb: "{{ color_above if outside and (sensor_available | bool) and lux | float(0) > max_lux | float(0) else color_below if outside and (sensor_available | bool) and lux | float(0) < min_lux | float(0) else color }}"
-      kelvin: "{{ temp_above if outside and (sensor_available | bool) and lux | float(0) > max_lux | float(0) else temp_below if outside and (sensor_available | bool) and lux | float(0) < min_lux | float(0) else temp }}"
+      kelvin: >-
+        {% if color_mode == 'include_circadian' and not sleep_active %}
+          {% set sun_elev = state_attr('sun.sun', 'elevation') | float(0) %}
+          {% set circ_temp = circadian_min | float + (([0, sun_elev] | max) / 90) * (circadian_max | float - circadian_min | float) %}
+          {{ circ_temp | int }}
+        {% elif sleep_active %}
+          {{ circadian_min | int }}
+        {% else %}
+          {{ temp_above if outside and (sensor_available | bool) and lux | float(0) > max_lux | float(0) else temp_below if outside and (sensor_available | bool) and lux | float(0) < min_lux | float(0) else temp }}
+        {% endif %}
   - variables:
       lights_to_update: >-
         {% set threshold = minimum_brightness_change | float(0) * 2.55 %}
+        {% set force_update = (is_motion_trigger | bool) or (sleep_active and trigger.entity_id == sleep_entity) %}
         {% set desired_brightness = brightness | int(1) %}
+        
+        {# Feltétel: Ha jelenlét vezérelt mód van, és nincs jelenlét, csak akkor frissítünk, ha mozgás-esemény történt #}
+        {% set skip_update = (enable_presence_brightness | bool) and not (presence_detected | bool) and not is_presence_event %}
+        
         {% set ns = namespace(lights=[]) %}
-        {% for light in target_lights %}
-          {% set current_brightness = state_attr(light, 'brightness') %}
-          {% if is_state(light, 'on') and (current_brightness is none or (((current_brightness | int(0)) - desired_brightness) | abs) >= threshold) %}
-            {% set ns.lights = ns.lights + [light] %}
-          {% endif %}
-        {% endfor %}
-        {{ ns.lights | join(', ') }}
+        {% if not skip_update %}
+          {% for light in target_lights %}
+            {% if is_state(light, 'on') %}
+              {% set current_brightness = state_attr(light, 'brightness') %}
+              {% if force_update or current_brightness is none or (((current_brightness | int(0)) - desired_brightness) | abs) >= threshold %}
+                {% set ns.lights = ns.lights + [light] %}
+              {% endif %}
+            {% endif %}
+          {% endfor %}
+        {% endif %}
+        {{ ns.lights }}
   - condition: template
     value_template: "{{ lights_to_update | length > 0 }}"
   - action: light.turn_on
