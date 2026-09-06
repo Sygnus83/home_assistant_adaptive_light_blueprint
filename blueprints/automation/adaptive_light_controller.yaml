@@ -1,7 +1,7 @@
 blueprint:
   name: Adaptive Light Controller v1.2
   author: Sygnus
-  description: "v1.2.3 - Advanced adaptive controller with Sleep Mode, Circadian support, and Smart Presence filtering."
+  description: "v1.2 - Advanced adaptive controller with Sleep Mode, Circadian support, and Smart Presence filtering."
   source_url: https://raw.githubusercontent.com/Sygnus83/home_assistant_adaptive_light_blueprint/refs/heads/main/blueprints/automation/adaptive_light_controller.yaml
   domain: automation
   homeassistant:
