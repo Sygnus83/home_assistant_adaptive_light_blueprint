@@ -344,7 +344,9 @@ triggers:
   - trigger: time_pattern
     minutes: !input periodic_update_interval
     enabled: !input enable_periodic_update
-
+  - trigger: state
+    entity_id: !input manual_override_entity
+    to: "off"    
 conditions:
   - condition: template
     value_template: "{{ override_entity == 'none' or is_state(override_entity, 'off') }}"
