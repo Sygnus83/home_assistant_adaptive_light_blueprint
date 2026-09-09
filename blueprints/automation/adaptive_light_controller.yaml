@@ -1,7 +1,7 @@
 blueprint:
-  name: Adaptive Light Controller v1.2
+  name: Adaptive Light Controller v1.2.1
   author: Sygnus
-  description: "v1.2 - Advanced adaptive controller with Sleep Mode, Circadian support, and Smart Presence filtering."
+  description: "v1.2.1 - Advanced adaptive controller. Optimized for UI stability, prevents 'Entity none' errors, and includes smart presence filtering."
   source_url: https://raw.githubusercontent.com/Sygnus83/home_assistant_adaptive_light_blueprint/refs/heads/main/blueprints/automation/adaptive_light_controller.yaml
   domain: automation
   homeassistant:
@@ -173,9 +173,13 @@ blueprint:
       icon: mdi:bed
       collapsed: true
       input:
+        enable_sleep_mode:
+          name: Enable Sleep Mode
+          default: false
+          selector: {boolean: {}}
         sleep_mode_entity:
           name: Sleep Mode Entity (Optional)
-          description: An input_boolean or binary_sensor. If ON, sleep brightness is used.
+          description: "Select an input_boolean or binary_sensor. Active only if Enable Sleep Mode is ON."
           default: none
           selector:
             entity:
@@ -185,9 +189,13 @@ blueprint:
           default: 5
           selector:
             number: {min: 1, max: 100, step: 1, unit_of_measurement: "%", mode: slider}
+    enable_manual_override:
+      name: Enable Manual Override
+      default: false
+      selector: {boolean: {}}
     manual_override_entity:
       name: Manual Override Helper (Optional)
-      description: "An input_boolean. If this is ON, the automation will skip updates."
+      description: "Select an input_boolean. Active only if Enable Manual Override is ON."
       default: none
       selector:
         entity:
@@ -304,8 +312,10 @@ variables:
   temp_above: !input light_temp_over_max
   circadian_min: !input circadian_min_temp
   circadian_max: !input circadian_max_temp
+  use_sleep: !input enable_sleep_mode
   sleep_entity: !input sleep_mode_entity
   sleep_level: !input sleep_brightness
+  use_override: !input enable_manual_override
   override_entity: !input manual_override_entity
   transition: !input transition_time
   enable_presence_brightness: !input enable_presence_brightness
@@ -328,28 +338,49 @@ variables:
 triggers:
   - trigger: state
     entity_id: !input light_sensor_entity
+    id: "lux_change"
   - trigger: state
     entity_id: !input trigger_light
     from: "off"
     to: "on"
+    id: "light_on"
   - trigger: state
     entity_id: !input presence_entities
     enabled: !input enable_presence_brightness
+    id: "presence_change"
   - trigger: state
     entity_id: !input presence_entities
     to: "off"
     for:
       seconds: !input presence_hold_time
     enabled: !input enable_presence_brightness
+    id: "presence_off"
   - trigger: time_pattern
     minutes: !input periodic_update_interval
     enabled: !input enable_periodic_update
-  - trigger: state
-    entity_id: !input manual_override_entity
-    to: "off"    
+    id: "periodic"
+  - trigger: template
+    value_template: >-
+      {% set ent = sleep_entity %}
+      {{ use_sleep and ent is not none and ent != 'none' and states(ent) in ['on', 'off'] }}
+    id: "sleep_toggle"
+  - trigger: template
+    value_template: >-
+      {% set ent = override_entity %}
+      {{ use_override and ent is not none and ent != 'none' and states(ent) in ['on', 'off'] }}
+    id: "override_toggle"
+
 conditions:
   - condition: template
-    value_template: "{{ override_entity == 'none' or is_state(override_entity, 'off') }}"
+    value_template: >-
+      {% set trigger_id = trigger.id | default('none') %}
+      {% if trigger_id == 'override_toggle' %}
+        true
+      {% elif use_override and override_entity is not none and override_entity != 'none' and has_value(override_entity) %}
+        {{ is_state(override_entity, 'off') }}
+      {% else %}
+        true
+      {% endif %}
   - condition: template
     value_template: "{{ has_value(sensor) or enable_sensor_fallback }}"
   - condition: template
@@ -391,11 +422,10 @@ actions:
   - variables:
       lux: "{{ states(sensor) | float(0) }}"
       sensor_available: "{{ has_value(sensor) }}"
-      sleep_active: "{{ is_state(sleep_entity, 'on') if sleep_entity != 'none' else false }}"
-      is_motion_trigger: >-
-        {{ trigger.entity_id is defined and trigger.entity_id in presence_entities and trigger.to_state is defined and trigger.to_state.state == 'on' }}
-      is_presence_event: >-
-        {{ trigger.entity_id is defined and trigger.entity_id in presence_entities }}
+      trigger_id: "{{ trigger.id | default('none') }}"
+      sleep_active: "{{ use_sleep and sleep_entity is not none and sleep_entity != 'none' and has_value(sleep_entity) and is_state(sleep_entity, 'on') }}"
+      is_motion_trigger: "{{ trigger_id in ['presence_change', 'light_on'] }}"
+      is_presence_event: "{{ trigger_id in ['presence_change', 'presence_off'] }}"
       presence_detected: >-
         {% set ns = namespace(detected=false) %}
         {% for entity in presence_entities %}
@@ -445,7 +475,7 @@ actions:
   - variables:
       lights_to_update: >-
         {% set threshold = minimum_brightness_change | float(0) * 2.55 %}
-        {% set force_update = (is_motion_trigger | bool) or (sleep_active and trigger.entity_id == sleep_entity) %}
+        {% set force_update = (is_motion_trigger | bool) or (trigger_id in ['sleep_toggle', 'override_toggle']) %}
         {% set desired_brightness = brightness | int(1) %}
         
         {# Feltétel: Ha jelenlét vezérelt mód van, és nincs jelenlét, csak akkor frissítünk, ha mozgás-esemény történt #}
